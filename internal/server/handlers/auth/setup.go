@@ -25,6 +25,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/register", handler.Handle(h.register))
 		r.Post("/login", handler.Handle(h.login))
 		r.Post("/refresh", handler.Handle(h.refresh))
-		r.With(authmw.RequireAuth(h.redis)).Post("/logout", handler.Handle(h.logout))
+
+		r.With(authmw.RequireAuth(h.redis)).
+			Post("/logout", handler.Handle(h.logout))
 	})
 }
