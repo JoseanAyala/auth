@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"auth-as-a-service/internal/hasher"
+	"auth-as-a-service/internal/token"
 )
 
 func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,5 +112,20 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, loginResponse{Token: "test"})
+	tok, err := token.Generate(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, loginResponse{Token: tok})
+}
+
+func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if err := token.Revoke(r.Context(), tokenString, h.cache); err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

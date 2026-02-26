@@ -20,3 +20,9 @@ body:json {
     "password": "supersecret"
   }
 }
+
+script:after-response {
+  if (res.status === 200) {
+    bru.setEnvVar("token", res.getBody().token);
+  }
+}
