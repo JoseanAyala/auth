@@ -1,4 +1,4 @@
-package util
+package httpkit
 
 import (
 	"encoding/json"
@@ -26,20 +26,20 @@ type Func func(r *http.Request) (*Response, error)
 func Handle(fn Func) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp, err := fn(r)
-		// Handler error
+		// Handler error types
 		if err != nil {
-			var ve ValidationError
+			var fe FieldError
 			var ce Error
 			switch {
-			case errors.As(err, &ve):
-				writeJSON(w, http.StatusBadRequest, errorBody{
-					Message: "validation failed",
-					Errors:  ve.Fields,
+			case errors.As(err, &fe):
+				writeJSON(w, fe.Code, errorBody{
+					Message: "Error validating fields",
+					Errors:  fe.Fields,
 				})
 			case errors.As(err, &ce):
 				writeJSON(w, ce.Code, errorBody{Message: ce.Message})
 			default:
-				writeJSON(w, http.StatusInternalServerError, errorBody{Message: "internal error"})
+				writeJSON(w, http.StatusInternalServerError, errorBody{Message: "Internal error"})
 			}
 			return
 		}

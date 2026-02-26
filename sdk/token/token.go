@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"auth-as-a-service/app/redis"
+	"auth-as-a-service/app/memory/redis"
 )
 
 func Generate(userID string) (string, error) {

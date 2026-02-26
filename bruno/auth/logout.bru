@@ -1,21 +1,29 @@
 meta {
   name: Logout
   type: http
-  seq: 3
+  seq: 4
 }
 
 post {
   url: {{baseUrl}}/auth/logout
-  body: none
+  body: json
   auth: none
 }
 
 headers {
-  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  Authorization: Bearer {{access_token}}
+}
+
+body:json {
+  {
+    "refresh_token": "{{refresh_token}}"
+  }
 }
 
 script:post-response {
   if (res.status === 204) {
-    bru.setEnvVar("token", "");
+    bru.setEnvVar("access_token", "");
+    bru.setEnvVar("refresh_token", "");
   }
 }

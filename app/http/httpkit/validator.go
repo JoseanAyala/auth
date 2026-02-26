@@ -1,4 +1,4 @@
-package util
+package httpkit
 
 import (
 	"encoding/json"
@@ -35,7 +35,7 @@ func DecodeBody[T BodySetter](r *http.Request) (T, error) {
 		return req, ClientErr(http.StatusBadRequest, "invalid request body")
 	}
 	if err := req.SetBody(); err != nil {
-		return req, ClientErr(http.StatusBadRequest, "invalid request body")
+		return req, err
 	}
 	if err := validateStruct(req); err != nil {
 		return req, err
@@ -122,7 +122,7 @@ func validateStruct(v any) error {
 	return nil
 }
 
-func newValidationErr(ve validator.ValidationErrors) ValidationError {
+func newValidationErr(ve validator.ValidationErrors) FieldError {
 	fields := make(map[string][]string, len(ve))
 	for _, fe := range ve {
 		field := strings.ToLower(fe.Field())
@@ -139,5 +139,5 @@ func newValidationErr(ve validator.ValidationErrors) ValidationError {
 			fields[field] = append(fields[field], "is invalid")
 		}
 	}
-	return ValidationError{Fields: fields}
+	return FieldError{Code: http.StatusBadRequest, Fields: fields}
 }

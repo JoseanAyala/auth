@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
-	"auth-as-a-service/app/database"
 	"auth-as-a-service/app/hasher"
 	"auth-as-a-service/app/http/middleware/ratelimiter"
-	"auth-as-a-service/app/redis"
-	"auth-as-a-service/app/store"
+	"auth-as-a-service/app/memory/database"
+	"auth-as-a-service/app/memory/redis"
+	"auth-as-a-service/app/memory/store"
 
 	_ "github.com/joho/godotenv/autoload"
 )
@@ -44,7 +44,7 @@ func NewServer() *http.Server {
 	rl := ratelimiter.New(rps, burst)
 	rl.Start()
 
-	Server := &Server{
+	handler := &Server{
 		db:          db,
 		redis:       redis,
 		store:       store.New(db.DB()),
@@ -54,7 +54,7 @@ func NewServer() *http.Server {
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
-		Handler:      Server.Setup(),
+		Handler:      handler.Setup(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,

@@ -1,7 +1,7 @@
 package store
 
 import (
-	"auth-as-a-service/app/store/user"
+	"auth-as-a-service/app/memory/store/user"
 
 	"github.com/jmoiron/sqlx"
 )

@@ -1,4 +1,4 @@
-package util
+package httpkit
 
 import (
 	"fmt"
@@ -24,13 +24,13 @@ func ClientErr(code int, msg string) error {
 	return Error{Code: code, Message: msg}
 }
 
-// ValidationError carries per-field validation failures.
-// Handle renders it as a 400 with the field map in the "errors" key.
-type ValidationError struct {
+// FieldError carries per-field validation failures.
+type FieldError struct {
+	Code   int
 	Fields map[string][]string
 }
 
-func (e ValidationError) Error() string {
+func (e FieldError) Error() string {
 	msgs := make([]string, 0, len(e.Fields))
 	for field, errs := range e.Fields {
 		msgs = append(msgs, fmt.Sprintf("%s: %s", field, strings.Join(errs, ", ")))

@@ -3,9 +3,9 @@ package health
 import (
 	"net/http"
 
-	"auth-as-a-service/app/database"
-	"auth-as-a-service/app/http/util"
-	"auth-as-a-service/app/redis"
+	"auth-as-a-service/app/http/httpkit"
+	"auth-as-a-service/app/memory/database"
+	"auth-as-a-service/app/memory/redis"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -15,24 +15,24 @@ type Handler struct {
 	redis redis.Service
 }
 
-func New(db database.Service, cache redis.Service) *Handler {
+func New(db database.Service, redis redis.Service) *Handler {
 	return &Handler{
 		db:    db,
-		redis: cache,
+		redis: redis,
 	}
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	r.Get("/health", util.Handle(h.healthHandler))
+	r.Get("/health", httpkit.Handle(h.healthHandler))
 }
 
-func (h *Handler) healthHandler(r *http.Request) (*util.Response, error) {
+func (h *Handler) healthHandler(r *http.Request) (*httpkit.Response, error) {
 	resp := map[string]any{
 		"database": h.db.Health(),
 		"redis":    h.redis.Health(),
 	}
 
-	return &util.Response{
+	return &httpkit.Response{
 		Status: http.StatusOK,
 		Body:   resp,
 	}, nil

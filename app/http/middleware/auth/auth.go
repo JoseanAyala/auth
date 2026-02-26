@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"auth-as-a-service/app/redis"
-	"auth-as-a-service/app/token"
+	"auth-as-a-service/app/memory/redis"
+	"auth-as-a-service/sdk/token"
 )
 
 type contextKey string
