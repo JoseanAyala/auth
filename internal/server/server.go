@@ -9,20 +9,22 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
+	"auth-as-a-service/internal/cache"
 	"auth-as-a-service/internal/database"
 )
 
 type Server struct {
-	port int
-	db   database.Service
+	port  int
+	db    database.Service
+	cache cache.Service
 }
 
 func NewServer() *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
-		port: port,
-
-		db: database.New(),
+		port:  port,
+		db:    database.New(),
+		cache: cache.New(),
 	}
 
 	// Declare Server config
