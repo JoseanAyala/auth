@@ -10,7 +10,7 @@ None — can start immediately.
 
 ## Acceptance Criteria
 
-- [ ] `internal/guardian/ratelimiter.go` implements the token bucket per IP using `sync.Map`.
+- [ ] implemented the token bucket per IP using `sync.Map`.
 - [ ] Each bucket refills at `RATE_LIMIT_RPS` tokens/second up to a max of `RATE_LIMIT_BURST`.
 - [ ] Requests that exceed the limit receive `429 Too Many Requests` with a `Retry-After` header.
 - [ ] A background sweeper goroutine removes entries not seen in the last 5 minutes; runs every 60 seconds.
@@ -19,14 +19,14 @@ None — can start immediately.
 - [ ] Middleware is applied globally in `RegisterRoutes()`.
 - [ ] `RATE_LIMIT_RPS` (default `10`) and `RATE_LIMIT_BURST` (default `20`) are read from env at startup.
 - [ ] Unit tests cover: requests within limit pass, requests over limit get 429, sweeper removes stale entries.
-- [ ] Tests pass under `go test -race ./internal/guardian/...`.
+- [ ] Tests pass under `go test -race ./internal/server/ratelimiter/...`.
 
 ## Implementation Notes
 
 ### Package structure
 
 ```
-internal/guardian/
+internal/server/ratelimiter/
   ratelimiter.go
   ratelimiter_test.go
 ```

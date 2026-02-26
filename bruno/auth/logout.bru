@@ -13,3 +13,9 @@ post {
 headers {
   Authorization: Bearer {{token}}
 }
+
+script:post-response {
+  if (res.status === 204) {
+    bru.setEnvVar("token", "");
+  }
+}
