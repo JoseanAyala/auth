@@ -5,6 +5,8 @@ type authRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 }
 
+func (r *authRequest) SetBody() error { return nil }
+
 type registerResponse struct {
 	ID    string `json:"id"`
 	Email string `json:"email"`

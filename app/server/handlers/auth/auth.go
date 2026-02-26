@@ -15,7 +15,7 @@ import (
 )
 
 func (h *Handler) register(r *http.Request) (*handler.Response, error) {
-	req, err := handler.DecodeBody[authRequest](r)
+	req, err := handler.DecodeBody[*authRequest](r)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +49,7 @@ func (h *Handler) register(r *http.Request) (*handler.Response, error) {
 }
 
 func (h *Handler) login(r *http.Request) (*handler.Response, error) {
-	req, err := handler.DecodeBody[authRequest](r)
+	req, err := handler.DecodeBody[*authRequest](r)
 	if err != nil {
 		return nil, err
 	}
