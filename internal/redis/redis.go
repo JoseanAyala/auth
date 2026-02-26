@@ -1,4 +1,4 @@
-package cache
+package redis
 
 import (
 	"context"
@@ -27,12 +27,12 @@ var (
 	host          = os.Getenv("REDIS_HOST")
 	port          = os.Getenv("REDIS_PORT")
 	password      = os.Getenv("REDIS_PASSWORD")
-	cacheInstance *service
+	redisInstance *service
 )
 
 func New() Service {
-	if cacheInstance != nil {
-		return cacheInstance
+	if redisInstance != nil {
+		return redisInstance
 	}
 
 	client := redis.NewClient(&redis.Options{
@@ -41,8 +41,8 @@ func New() Service {
 		DB:       0,
 	})
 
-	cacheInstance = &service{client: client}
-	return cacheInstance
+	redisInstance = &service{client: client}
+	return redisInstance
 }
 
 func (s *service) Get(ctx context.Context, key string) (string, error) {

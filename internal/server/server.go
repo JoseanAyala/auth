@@ -9,28 +9,43 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 
-	"auth-as-a-service/internal/cache"
 	"auth-as-a-service/internal/database"
+	"auth-as-a-service/internal/hasher"
+	redis "auth-as-a-service/internal/redis"
+	"auth-as-a-service/internal/store"
 )
 
 type Server struct {
-	port  int
-	db    database.Service
-	cache cache.Service
+	db     database.Service
+	redis  redis.Service
+	hasher *hasher.Dispatcher
+	store  *store.Registry
 }
 
 func NewServer() *http.Server {
-	port, _ := strconv.Atoi(os.Getenv("PORT"))
-	NewServer := &Server{
-		port:  port,
-		db:    database.New(),
-		cache: cache.New(),
+	port, err := strconv.Atoi(os.Getenv("PORT"))
+	if err != nil {
+		panic("server port value is not valid")
 	}
 
-	// Declare Server config
+	// Setup memory
+	db := database.New()
+	redis := redis.New()
+
+	// Setup Worker
+	h := hasher.NewDispatcher()
+	h.Start()
+
+	Server := &Server{
+		db:     db,
+		redis:  redis,
+		store:  store.New(db.DB()),
+		hasher: h,
+	}
+
 	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", NewServer.port),
-		Handler:      NewServer.RegisterRoutes(),
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      Server.Setup(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
