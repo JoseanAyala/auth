@@ -14,6 +14,7 @@ import (
 func (s *Server) Setup() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+	r.Use(s.rateLimiter.Middleware())
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},

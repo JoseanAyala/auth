@@ -3,7 +3,7 @@ package auth
 import (
 	"auth-as-a-service/internal/hasher"
 	"auth-as-a-service/internal/redis"
-	authmw "auth-as-a-service/internal/server/middleware"
+	authmw "auth-as-a-service/internal/server/middleware/auth"
 	userstore "auth-as-a-service/internal/store/user"
 
 	"github.com/go-chi/chi/v5"
