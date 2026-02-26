@@ -1,14 +1,8 @@
 package auth
 
-import (
-	"encoding/json"
-	"net/http"
-	"net/mail"
-)
-
 type authRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email"    validate:"required,email"`
+	Password string `json:"password" validate:"required,min=8"`
 }
 
 type registerResponse struct {
@@ -17,20 +11,15 @@ type registerResponse struct {
 }
 
 type loginResponse struct {
-	Token string `json:"token"`
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-type errorResponse struct {
-	Error string `json:"error"`
+type refreshResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
-}
-
-func validEmail(email string) bool {
-	_, err := mail.ParseAddress(email)
-	return err == nil
+type logoutRequest struct {
+	RefreshToken string `json:"refresh_token"`
 }

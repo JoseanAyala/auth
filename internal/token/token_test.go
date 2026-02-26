@@ -46,6 +46,7 @@ func (m *mockCache) Close() error              { return nil }
 func TestMain(m *testing.M) {
 	os.Setenv("JWT_SECRET", "test-secret-key-for-unit-tests")
 	os.Setenv("JWT_EXPIRY_HOURS", "24")
+	os.Setenv("REFRESH_TOKEN_EXPIRY_DAYS", "30")
 	os.Exit(m.Run())
 }
 
@@ -111,5 +112,83 @@ func TestRevokedToken(t *testing.T) {
 	_, err = token.Validate(context.Background(), tok, cache)
 	if err == nil {
 		t.Fatal("expected error for revoked token, got nil")
+	}
+}
+
+func TestValidRefreshToken(t *testing.T) {
+	cache := newMockCache()
+	tok, err := token.GenerateRefresh("user-456")
+	if err != nil {
+		t.Fatalf("generate refresh: %v", err)
+	}
+
+	userID, err := token.ValidateRefresh(context.Background(), tok, cache)
+	if err != nil {
+		t.Fatalf("validate refresh: %v", err)
+	}
+	if userID != "user-456" {
+		t.Errorf("expected user-456, got %s", userID)
+	}
+}
+
+func TestRefreshTokenRejectedAsAccessToken(t *testing.T) {
+	cache := newMockCache()
+	tok, err := token.GenerateRefresh("user-456")
+	if err != nil {
+		t.Fatalf("generate refresh: %v", err)
+	}
+
+	_, err = token.Validate(context.Background(), tok, cache)
+	if err == nil {
+		t.Fatal("expected error using refresh token as access token, got nil")
+	}
+}
+
+func TestAccessTokenRejectedAsRefreshToken(t *testing.T) {
+	cache := newMockCache()
+	tok, err := token.Generate("user-456")
+	if err != nil {
+		t.Fatalf("generate: %v", err)
+	}
+
+	_, err = token.ValidateRefresh(context.Background(), tok, cache)
+	if err == nil {
+		t.Fatal("expected error using access token as refresh token, got nil")
+	}
+}
+
+func TestRevokedRefreshToken(t *testing.T) {
+	cache := newMockCache()
+	tok, err := token.GenerateRefresh("user-456")
+	if err != nil {
+		t.Fatalf("generate refresh: %v", err)
+	}
+
+	if err := token.Revoke(context.Background(), tok, cache); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+
+	_, err = token.ValidateRefresh(context.Background(), tok, cache)
+	if err == nil {
+		t.Fatal("expected error for revoked refresh token, got nil")
+	}
+}
+
+func TestRotatedRefreshTokenRejected(t *testing.T) {
+	cache := newMockCache()
+	oldRefresh, err := token.GenerateRefresh("user-456")
+	if err != nil {
+		t.Fatalf("generate refresh: %v", err)
+	}
+
+	// Simulate rotation: revoke old refresh token.
+	if err := token.Revoke(context.Background(), oldRefresh, cache); err != nil {
+		t.Fatalf("revoke: %v", err)
+	}
+
+	// Old refresh token must no longer be usable.
+	_, err = token.ValidateRefresh(context.Background(), oldRefresh, cache)
+	if err == nil {
+		t.Fatal("expected error reusing rotated refresh token, got nil")
 	}
 }

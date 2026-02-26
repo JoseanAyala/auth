@@ -10,84 +10,58 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"auth-as-a-service/internal/hasher"
+	"auth-as-a-service/internal/server/handler"
 	"auth-as-a-service/internal/token"
 )
 
-func (h *Handler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-	var req authRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
-		return
+func (h *Handler) register(r *http.Request) (*handler.Response, error) {
+	req, err := handler.DecodeBody[authRequest](r)
+	if err != nil {
+		return nil, err
 	}
 
-	if !validEmail(req.Email) {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid email format"})
-		return
-	}
-	if len(req.Password) < 8 {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "password must be at least 8 characters"})
-		return
-	}
-
-	// Hash password via the Hasher worker pool.
 	result := make(chan hasher.HashResult, 1)
 	if err := h.hasher.Submit(hasher.HashJob{Password: req.Password, Result: result}); err != nil {
 		if errors.Is(err, hasher.ErrQueueFull) {
-			writeJSON(w, http.StatusServiceUnavailable, errorResponse{Error: "service busy, try again later"})
-			return
+			return nil, handler.ClientErr(http.StatusServiceUnavailable, "service busy, try again later")
 		}
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, err
 	}
 
 	hr := <-result
 	if hr.Err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, hr.Err
 	}
 
 	user, err := h.users.Create(r.Context(), req.Email, hr.Hash)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			writeJSON(w, http.StatusConflict, errorResponse{Error: "email already exists"})
-			return
+			return nil, handler.ClientErr(http.StatusConflict, "email already exists")
 		}
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, err
 	}
 
-	writeJSON(w, http.StatusCreated, registerResponse{ID: user.ID, Email: user.Email})
+	return &handler.Response{
+		Status: http.StatusCreated,
+		Body:   registerResponse{ID: user.ID, Email: user.Email},
+	}, nil
 }
 
-func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
-	var req authRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
-		return
-	}
-
-	if !validEmail(req.Email) {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid email format"})
-		return
-	}
-	if len(req.Password) < 8 {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "password must be at least 8 characters"})
-		return
+func (h *Handler) login(r *http.Request) (*handler.Response, error) {
+	req, err := handler.DecodeBody[authRequest](r)
+	if err != nil {
+		return nil, err
 	}
 
 	user, err := h.users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "invalid credentials"})
-			return
+			return nil, handler.ClientErr(http.StatusUnauthorized, "invalid credentials")
 		}
-
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, err
 	}
 
-	// Verify password via the Hasher worker pool.
 	result := make(chan hasher.VerifyResult, 1)
 	if err := h.hasher.Submit(hasher.VerifyJob{
 		Password:   req.Password,
@@ -95,37 +69,77 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		Result:     result,
 	}); err != nil {
 		if errors.Is(err, hasher.ErrQueueFull) {
-			writeJSON(w, http.StatusServiceUnavailable, errorResponse{Error: "service busy, try again later"})
-			return
+			return nil, handler.ClientErr(http.StatusServiceUnavailable, "service busy, try again later")
 		}
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, err
 	}
 
 	vr := <-result
 	if vr.Err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, vr.Err
 	}
 	if !vr.Match {
-		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "invalid credentials"})
-		return
+		return nil, handler.ClientErr(http.StatusUnauthorized, "invalid credentials")
 	}
 
-	tok, err := token.Generate(user.ID)
+	accessTok, err := token.Generate(user.ID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+		return nil, err
 	}
 
-	writeJSON(w, http.StatusOK, loginResponse{Token: tok})
+	refreshTok, err := token.GenerateRefresh(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &handler.Response{
+		Status: http.StatusOK,
+		Body:   loginResponse{AccessToken: accessTok, RefreshToken: refreshTok},
+	}, nil
 }
 
-func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if err := token.Revoke(r.Context(), tokenString, h.redis); err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
-		return
+func (h *Handler) logout(r *http.Request) (*handler.Response, error) {
+	accessToken := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if err := token.Revoke(r.Context(), accessToken, h.redis); err != nil {
+		return nil, err
 	}
-	w.WriteHeader(http.StatusNoContent)
+
+	var body logoutRequest
+	json.NewDecoder(r.Body).Decode(&body)
+	if body.RefreshToken != "" {
+		token.Revoke(r.Context(), body.RefreshToken, h.redis)
+	}
+
+	return &handler.Response{Status: http.StatusNoContent}, nil
+}
+
+func (h *Handler) refresh(r *http.Request) (*handler.Response, error) {
+	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if tokenString == "" {
+		return nil, handler.ClientErr(http.StatusUnauthorized, "missing token")
+	}
+
+	userID, err := token.ValidateRefresh(r.Context(), tokenString, h.redis)
+	if err != nil {
+		return nil, handler.ClientErr(http.StatusUnauthorized, "invalid or expired refresh token")
+	}
+
+	accessTok, err := token.Generate(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	refreshTok, err := token.GenerateRefresh(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := token.Revoke(r.Context(), tokenString, h.redis); err != nil {
+		return nil, err
+	}
+
+	return &handler.Response{
+		Status: http.StatusOK,
+		Body:   refreshResponse{AccessToken: accessTok, RefreshToken: refreshTok},
+	}, nil
 }
