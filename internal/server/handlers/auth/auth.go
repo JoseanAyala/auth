@@ -123,7 +123,7 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) LogoutHandler(w http.ResponseWriter, r *http.Request) {
 	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if err := token.Revoke(r.Context(), tokenString, h.cache); err != nil {
+	if err := token.Revoke(r.Context(), tokenString, h.redis); err != nil {
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal error"})
 		return
 	}
