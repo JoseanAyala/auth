@@ -7,13 +7,13 @@ import (
 	"strconv"
 	"time"
 
-	_ "github.com/joho/godotenv/autoload"
+	"auth-as-a-service/app/database"
+	"auth-as-a-service/app/hasher"
+	"auth-as-a-service/app/http/middleware/ratelimiter"
+	"auth-as-a-service/app/redis"
+	"auth-as-a-service/app/store"
 
-	"auth-as-a-service/internal/database"
-	"auth-as-a-service/internal/hasher"
-	redis "auth-as-a-service/internal/redis"
-	"auth-as-a-service/internal/server/middleware/ratelimiter"
-	"auth-as-a-service/internal/store"
+	_ "github.com/joho/godotenv/autoload"
 )
 
 type Server struct {

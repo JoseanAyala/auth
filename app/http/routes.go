@@ -3,12 +3,12 @@ package server
 import (
 	"net/http"
 
+	authHandler "auth-as-a-service/app/http/handlers/auth"
+	"auth-as-a-service/app/http/handlers/health"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-
-	authHandler "auth-as-a-service/internal/server/handlers/auth"
-	"auth-as-a-service/internal/server/handlers/health"
 )
 
 func (s *Server) Setup() http.Handler {

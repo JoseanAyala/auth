@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"auth-as-a-service/internal/server"
+	server "auth-as-a-service/app/http"
 )
 
 func gracefulShutdown(apiServer *http.Server, done chan bool) {

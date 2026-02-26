@@ -10,7 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
-	"auth-as-a-service/internal/token"
+	"auth-as-a-service/app/token"
 )
 
 // mockCache is an in-memory redis.Service for testing.
