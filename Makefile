@@ -1,8 +1,17 @@
 all: build test
 
+brew install:
+	@brew install go@1.26;
+	@brew install docker;
+	@brew install docker-compose;
+	@brew install docker-buildx;
+	@brew install colima;
+	@brew install --cask bruno;
+	@brew install air;
+	@brew install libpq;
+
 build:
 	@echo "Building..."
-	
 	
 	@go build -o main cmd/api/main.go
 
@@ -12,21 +21,11 @@ run:
 
 # Create DB container
 docker-run:
-	@if docker compose up --build 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
 		docker-compose up --build; \
-	fi
 
 # Shutdown DB container
 docker-down:
-	@if docker compose down 2>/dev/null; then \
-		: ; \
-	else \
-		echo "Falling back to Docker Compose V1"; \
 		docker-compose down; \
-	fi
 
 # Test the application
 test:
@@ -38,15 +37,18 @@ itest:
 	@echo "Running integration tests..."
 	@go test ./internal/database -v
 
+# Run migrations up
+migrate-up:
+	@go run ./cmd/migrate up
+
+# Run migrations down
+migrate-down:
+	@go run ./cmd/migrate down
+
 # Clean the binary
 clean:
 	@echo "Cleaning..."
 	@rm -f main
-
-# Fetch dependencies
-deps:
-	@echo "Fetching dependencies..."
-	@go get github.com/redis/go-redis/v9
 
 # Live Reload
 watch:
@@ -64,5 +66,3 @@ watch:
                 exit 1; \
             fi; \
         fi
-
-.PHONY: all build run test clean watch docker-run docker-down itest deps

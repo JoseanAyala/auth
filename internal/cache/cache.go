@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/redis/go-redis/v9"
 )
 
 type Service interface {
@@ -24,10 +24,9 @@ type service struct {
 }
 
 var (
-	host     = os.Getenv("REDIS_HOST")
-	port     = os.Getenv("REDIS_PORT")
-	password = os.Getenv("REDIS_PASSWORD")
-
+	host          = os.Getenv("REDIS_HOST")
+	port          = os.Getenv("REDIS_PORT")
+	password      = os.Getenv("REDIS_PASSWORD")
 	cacheInstance *service
 )
 
@@ -64,7 +63,10 @@ func (s *service) Health() map[string]string {
 
 	stats := make(map[string]string)
 
-	pong, err := s.client.Ping(ctx).Result()
+	start := time.Now()
+	_, err := s.client.Ping(ctx).Result()
+	latency := time.Since(start)
+
 	if err != nil {
 		stats["redis_status"] = "down"
 		stats["redis_error"] = fmt.Sprintf("redis down: %v", err)
@@ -73,12 +75,10 @@ func (s *service) Health() map[string]string {
 	}
 
 	stats["redis_status"] = "up"
-	stats["redis_message"] = pong
+	stats["redis_latency"] = latency.String()
 
-	info, err := s.client.Info(ctx, "stats").Result()
-	if err == nil {
-		stats["redis_info"] = info
-	}
+	poolStats := s.client.PoolStats()
+	stats["redis_connections"] = fmt.Sprintf("%d hits, %d misses, %d timeouts", poolStats.Hits, poolStats.Misses, poolStats.Timeouts)
 
 	return stats
 }

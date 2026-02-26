@@ -6,7 +6,7 @@ Verify the entire system is free of data races under concurrent load before cons
 
 ## Blocked by
 
-- **#03** — Forge must be complete.
+- **#03** — Hasher must be complete.
 - **#06** — Guardian must be complete.
 - **#09** — Graceful shutdown must be complete (tests must be able to start/stop cleanly).
 
@@ -18,7 +18,7 @@ Verify the entire system is free of data races under concurrent load before cons
 - [ ] Any races found are documented with root cause and fix described in a comment or commit message.
 - [ ] Known likely race candidates are reviewed and confirmed safe:
   - Token bucket state in the Guardian (`sync.Mutex` per bucket).
-  - Job channel sends/receives in the Forge.
+  - Job channel sends/receives in the Hasher.
   - `sync.Map` usage in the Guardian sweeper.
 
 ## Implementation Notes
@@ -51,6 +51,6 @@ hey -n 10000 -c 50 -m POST \
 | Location | Risk | Mitigation |
 |----------|------|------------|
 | `guardian/ratelimiter.go` bucket | Concurrent token reads/writes | Per-bucket `sync.Mutex` |
-| `forge/dispatcher.go` job channel | Concurrent submit + close | Channel semantics are safe; ensure `Stop()` only closes once |
+| `hasher/dispatcher.go` job channel | Concurrent submit + close | Channel semantics are safe; ensure `Stop()` only closes once |
 | `metrics` goroutine sampler | Gauge write vs HTTP read | `promauto` gauges are thread-safe by design |
 | `database` singleton | Double-init of `dbInstance` | Wrap in `sync.Once` |

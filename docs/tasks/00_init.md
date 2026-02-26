@@ -21,7 +21,7 @@ To build an authentication system that is inherently resilient to brute-force at
 
 ---
 
-### ⚙️ Phase 2: The Forge (Hashing Worker Pool)
+### ⚙️ Phase 2: The Hasher (Hashing Worker Pool)
 
 **Goal:** Prevent CPU exhaustion from Argon2 hashing requests.
 
@@ -65,7 +65,7 @@ To build an authentication system that is inherently resilient to brute-force at
 - [ ] Implement basic HTTP server with a "Health Check" endpoint.
 - [ ] Set up Database/Redis connections.
 
-### Milestone 2: The Forge (Heart of the System)
+### Milestone 2: The Hasher (Heart of the System)
 - [ ] Build the Worker and Dispatcher logic.
 - [ ] Implement Argon2 hashing within the workers.
 - [ ] Test hashing throughput under load.

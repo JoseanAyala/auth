@@ -2,11 +2,11 @@
 
 ## Goal
 
-Expose operational visibility into the system's concurrency health — specifically whether the Forge is approaching saturation, how many requests are being dropped, and overall goroutine growth.
+Expose operational visibility into the system's concurrency health — specifically whether the Hasher is approaching saturation, how many requests are being dropped, and overall goroutine growth.
 
 ## Blocked by
 
-- **#03** — Forge dispatcher must exist to instrument.
+- **#03** — Hasher dispatcher must exist to instrument.
 
 ## Acceptance Criteria
 
@@ -16,14 +16,14 @@ Expose operational visibility into the system's concurrency health — specifica
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `forge_jobs_queued` | Gauge | Current number of jobs waiting in the channel |
-| `forge_jobs_processed_total` | Counter | Total jobs successfully completed |
-| `forge_jobs_dropped_total` | Counter | Total jobs rejected due to full queue (backpressure) |
+| `hasher_jobs_queued` | Gauge | Current number of jobs waiting in the channel |
+| `hasher_jobs_processed_total` | Counter | Total jobs successfully completed |
+| `hasher_jobs_dropped_total` | Counter | Total jobs rejected due to full queue (backpressure) |
 | `http_requests_total` | Counter | Requests by `method`, `path`, `status` labels |
 | `active_goroutines` | Gauge | Sampled from `runtime.NumGoroutine()` |
 
-- [ ] `forge_jobs_queued` and `active_goroutines` are updated on a background ticker (every 5 seconds) rather than inline to avoid hot-path overhead.
-- [ ] `forge_jobs_dropped_total` is incremented in `Dispatcher.Submit` on `ErrQueueFull`.
+- [ ] `hasher_jobs_queued` and `active_goroutines` are updated on a background ticker (every 5 seconds) rather than inline to avoid hot-path overhead.
+- [ ] `hasher_jobs_dropped_total` is incremented in `Dispatcher.Submit` on `ErrQueueFull`.
 - [ ] A chi middleware records `http_requests_total` after each request.
 
 ## Implementation Notes
@@ -45,16 +45,16 @@ go get github.com/prometheus/client_golang
 
 ```go
 var (
-    ForgeJobsQueued = promauto.NewGauge(prometheus.GaugeOpts{
-        Name: "forge_jobs_queued",
-        Help: "Current jobs waiting in the Forge channel.",
+    HasherJobsQueued = promauto.NewGauge(prometheus.GaugeOpts{
+        Name: "hasher_jobs_queued",
+        Help: "Current jobs waiting in the Hasher channel.",
     })
-    ForgeJobsProcessed = promauto.NewCounter(prometheus.CounterOpts{
-        Name: "forge_jobs_processed_total",
-        Help: "Total jobs completed by Forge workers.",
+    HasherJobsProcessed = promauto.NewCounter(prometheus.CounterOpts{
+        Name: "hasher_jobs_processed_total",
+        Help: "Total jobs completed by Hasher workers.",
     })
-    ForgeJobsDropped = promauto.NewCounter(prometheus.CounterOpts{
-        Name: "forge_jobs_dropped_total",
+    HasherJobsDropped = promauto.NewCounter(prometheus.CounterOpts{
+        Name: "hasher_jobs_dropped_total",
         Help: "Total jobs rejected due to full queue.",
     })
     HTTPRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{

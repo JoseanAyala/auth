@@ -1,4 +1,4 @@
-# Task 09 — Extend graceful shutdown to drain the Forge and stop the Guardian sweeper
+# Task 09 — Extend graceful shutdown to drain the Hasher and stop the Guardian sweeper
 
 ## Goal
 
@@ -6,14 +6,14 @@ Ensure no goroutines, in-flight hashing jobs, or background sweepers are abandon
 
 ## Blocked by
 
-- **#03** — Forge dispatcher must expose `Stop()`.
+- **#03** — Hasher dispatcher must expose `Stop()`.
 - **#06** — Guardian rate limiter must expose `Stop()`.
 
 ## Acceptance Criteria
 
 - [ ] `gracefulShutdown` in `cmd/api/main.go` shuts down in this order:
   1. Stop accepting new HTTP requests (`server.Shutdown`).
-  2. Call `forge.Stop()` — blocks until all in-flight jobs complete.
+  2. Call `hasher.Stop()` — blocks until all in-flight jobs complete.
   3. Call `guardian.Stop()` — stops the background sweeper.
   4. Close the Redis connection (`cache.Close()`).
   5. Close the DB connection (`db.Close()`).
@@ -46,7 +46,7 @@ func gracefulShutdown(deps *deps, done chan bool) {
     }()
     wg.Wait()
 
-    deps.forge.Stop()
+    deps.hasher.Stop()
     deps.guardian.Stop()
     deps.cache.Close()
     deps.db.Close()
@@ -63,7 +63,7 @@ Introduce a `deps` struct in `cmd/api/main.go` to group all long-lived resources
 ```go
 type deps struct {
     httpServer *http.Server
-    forge      *forge.Dispatcher
+    hasher   *hasher.Dispatcher
     guardian   *guardian.RateLimiter
     cache      cache.Service
     db         database.Service
