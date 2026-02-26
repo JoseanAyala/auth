@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"auth-as-a-service/app/hasher"
 	"auth-as-a-service/app/http/httpkit"
 	"auth-as-a-service/app/memory/redis"
 	userStore "auth-as-a-service/app/memory/store/user"
@@ -12,13 +11,12 @@ import (
 )
 
 type Handler struct {
-	users  *userStore.Store
-	redis  redis.Service
-	hasher *hasher.Dispatcher
+	users *userStore.Store
+	redis redis.Service
 }
 
-func New(users *userStore.Store, redis redis.Service, hasher *hasher.Dispatcher) *Handler {
-	return &Handler{users: users, redis: redis, hasher: hasher}
+func New(users *userStore.Store, redis redis.Service) *Handler {
+	return &Handler{users: users, redis: redis}
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {

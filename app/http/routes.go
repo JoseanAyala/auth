@@ -27,7 +27,7 @@ func (s *Server) Setup() http.Handler {
 	health.New(s.db, s.redis).RegisterRoutes(r)
 
 	// Setup auth handler
-	authHandler.New(s.store.Users, s.redis, s.hasher).RegisterRoutes(r)
+	authHandler.New(s.store.Users, s.redis).RegisterRoutes(r)
 
 	return r
 }

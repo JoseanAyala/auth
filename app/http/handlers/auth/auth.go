@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"auth-as-a-service/app/hasher"
 	"auth-as-a-service/app/http/httpkit"
+	"auth-as-a-service/sdk/crypto"
 	"auth-as-a-service/sdk/token"
 )
 
@@ -19,25 +19,18 @@ func (h *Handler) register(r *http.Request) (*httpkit.Response, error) {
 		return nil, err
 	}
 
-	result := make(chan hasher.HashResult, 1)
-	if err := h.hasher.Submit(hasher.HashJob{Password: req.Password, Result: result}); err != nil {
-		if errors.Is(err, hasher.ErrQueueFull) {
-			return nil, httpkit.ClientErr(http.StatusServiceUnavailable, "service busy, try again later")
-		}
-		return nil, err
-	}
-
-	hr := <-result
-	if hr.Err != nil {
-		return nil, hr.Err
-	}
-
 	if err := checkBreachedPassword(req.Password); err != nil {
 		return nil, err
 	}
 
-	user, err := h.users.Create(r.Context(), req.Email, hr.Hash)
+	hashPW, err := crypto.HashPassword(req.Password)
 	if err != nil {
+		return nil, err
+	}
+
+	user, err := h.users.Create(r.Context(), req.Email, hashPW)
+	if err != nil {
+		// TODO: Better SQL default error handling
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
 			return nil, httpkit.FieldError{
@@ -65,29 +58,18 @@ func (h *Handler) login(r *http.Request) (*httpkit.Response, error) {
 	user, err := h.users.GetByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, httpkit.ClientErr(http.StatusUnauthorized, "invalid credentials")
+			return nil, httpkit.ClientErr(http.StatusUnauthorized, "Invalid credentials")
 		}
 		return nil, err
 	}
 
-	result := make(chan hasher.VerifyResult, 1)
-	if err := h.hasher.Submit(hasher.VerifyJob{
-		Password:   req.Password,
-		StoredHash: user.PasswordHash,
-		Result:     result,
-	}); err != nil {
-		if errors.Is(err, hasher.ErrQueueFull) {
-			return nil, httpkit.ClientErr(http.StatusServiceUnavailable, "service busy, try again later")
-		}
+	doesMatch, err := crypto.VerifyPassword(req.Password, user.PasswordHash)
+	if err != nil {
 		return nil, err
 	}
 
-	vr := <-result
-	if vr.Err != nil {
-		return nil, vr.Err
-	}
-	if !vr.Match {
-		return nil, httpkit.ClientErr(http.StatusUnauthorized, "invalid credentials")
+	if !doesMatch {
+		return nil, httpkit.ClientErr(http.StatusUnauthorized, "Invalid credentials")
 	}
 
 	accessTok, err := token.Generate(user.ID)

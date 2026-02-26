@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	"auth-as-a-service/app/hasher"
 	"auth-as-a-service/app/http/middleware/ratelimiter"
 	"auth-as-a-service/app/memory/database"
 	"auth-as-a-service/app/memory/redis"
@@ -19,7 +18,6 @@ import (
 type Server struct {
 	db          database.Service
 	redis       redis.Service
-	hasher      *hasher.Dispatcher
 	store       *store.Registry
 	rateLimiter *ratelimiter.RateLimiter
 }
@@ -34,10 +32,6 @@ func NewServer() *http.Server {
 	db := database.New()
 	redis := redis.New()
 
-	// Setup Worker
-	h := hasher.NewDispatcher()
-	h.Start()
-
 	// Setup rate limiter
 	rps := parseFloat(os.Getenv("RATE_LIMIT_RPS"), 10)
 	burst := parseFloat(os.Getenv("RATE_LIMIT_BURST"), 20)
@@ -48,7 +42,6 @@ func NewServer() *http.Server {
 		db:          db,
 		redis:       redis,
 		store:       store.New(db.DB()),
-		hasher:      h,
 		rateLimiter: rl,
 	}
 
