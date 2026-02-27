@@ -2,9 +2,11 @@ package redis
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -27,6 +29,8 @@ var (
 	host          = os.Getenv("REDIS_HOST")
 	port          = os.Getenv("REDIS_PORT")
 	password      = os.Getenv("REDIS_PASSWORD")
+	redisTLS      = os.Getenv("REDIS_TLS")
+	appEnv        = os.Getenv("APP_ENV")
 	redisInstance *service
 )
 
@@ -35,11 +39,23 @@ func New() Service {
 		return redisInstance
 	}
 
-	client := redis.NewClient(&redis.Options{
+	if password == "" && appEnv != "local" && appEnv != "test" {
+		log.Fatal("REDIS_PASSWORD must be set in non-local environments")
+	}
+
+	opts := &redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", host, port),
 		Password: password,
 		DB:       0,
-	})
+	}
+
+	if strings.EqualFold(redisTLS, "true") || strings.EqualFold(redisTLS, "1") {
+		opts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+
+	client := redis.NewClient(opts)
 
 	redisInstance = &service{client: client}
 	return redisInstance
