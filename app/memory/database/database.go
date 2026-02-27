@@ -30,6 +30,7 @@ var (
 	port       = os.Getenv("DB_PORT")
 	host       = os.Getenv("DB_HOST")
 	schema     = os.Getenv("DB_SCHEMA")
+	sslmode    = os.Getenv("DB_SSLMODE")
 	dbInstance *service
 )
 
@@ -38,7 +39,10 @@ func New() Service {
 	if dbInstance != nil {
 		return dbInstance
 	}
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
+	if sslmode == "" {
+		sslmode = "require"
+	}
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s&search_path=%s", username, password, host, port, database, sslmode, schema)
 	db, err := sqlx.Open("pgx", connStr)
 	if err != nil {
 		log.Fatal(err)
